@@ -6,3 +6,4 @@ Reimplement search engine wiser in Go language.
 
 - [ ] implement store functions
 - [ ] implement `TestTextToPostingsList()`
+    
