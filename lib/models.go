@@ -3,7 +3,7 @@ package wiser
 // PostingsList ポスティングスリスト 文書IDのリンクリスト
 type PostingsList struct {
 	// 文書のID
-	CosumentID int
+	DocumentID int
 	// 特定文書中の位置情報配列
 	Positions []int
 	// 特定文書中の位置情報の数

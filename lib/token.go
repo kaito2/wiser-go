@@ -49,7 +49,7 @@ func TokenToPostingsList(documentID int, token string, position int) (InvertInde
 		TokenID: 0,
 		PostingsList: []PostingsList{
 			{
-				CosumentID:     0,
+				DocumentID:     0,
 				Positions:      nil,
 				PositionsCount: 0,
 				Next:           &PostingsList{},
