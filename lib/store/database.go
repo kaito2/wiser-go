@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"log"
 
 	wiser "github.com/kaito2/wiser-go/lib"
@@ -53,17 +54,25 @@ func (w *WiserStoreImpl) InitDatabase(dbPath string) error {
 	}
 	defer db.Close()
 
-	createSettingTableSQL := `
-	CREATE TABLE settings (
-	  key   TEXT PRIMARY KEY,
-	  value TEXT
-	);`
-
-	_, err = db.Exec(createSettingTableSQL)
+	baseDir := "./sql/initialize"
+	files, err := ioutil.ReadDir(baseDir)
 	if err != nil {
-		msg := xerrors.Errorf("failed to Exec: %w", err)
-		log.Println(msg)
-		return msg
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		filePath := baseDir + "/" + f.Name()
+		query, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			return xerrors.Errorf("failed to ReadFile: %w", err)
+		}
+
+		_, err = db.Exec(string(query))
+		if err != nil {
+			msg := xerrors.Errorf("failed to Exec: %w", err)
+			log.Println(msg)
+			return msg
+		}
 	}
 
 	return nil
