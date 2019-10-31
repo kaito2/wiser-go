@@ -31,12 +31,12 @@ type WiserStore interface {
 	Begin()
 	Commit()
 	RollBack()
-	GetDB() *sql.DB
+	GetDBPath() string
 }
 
 // WiserStoreImpl implementation
 type WiserStoreImpl struct {
-	DB *sql.DB
+	DBPath string
 }
 
 // errors
@@ -46,15 +46,8 @@ var (
 
 // NewWiserStore get new WireStore
 func NewWiserStore(dbPath string) (WiserStore, error) {
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		msg := xerrors.Errorf("failed to Open: %w", err)
-		log.Println(msg)
-		return nil, msg
-	}
-
 	wiserStoreImpl := WiserStoreImpl{
-		DB: db,
+		DBPath: dbPath,
 	}
 	var wiserStore WiserStore
 	wiserStore = &wiserStoreImpl
@@ -63,6 +56,13 @@ func NewWiserStore(dbPath string) (WiserStore, error) {
 
 // InitDatabase initialize DB
 func (w *WiserStoreImpl) InitDatabase() error {
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return msg
+	}
+
 	// migration queries
 	baseDir := "./sql/initialize"
 	files, err := ioutil.ReadDir(baseDir)
@@ -79,7 +79,7 @@ func (w *WiserStoreImpl) InitDatabase() error {
 			return msg
 		}
 
-		_, err = w.DB.Exec(string(query))
+		_, err = db.Exec(string(query))
 		if err != nil {
 			msg := xerrors.Errorf("failed to Exec: %w", err)
 			log.Println(msg)
@@ -89,7 +89,7 @@ func (w *WiserStoreImpl) InitDatabase() error {
 
 	// prepared statements
 
-	stmt, err := w.DB.Prepare("INSERT INTO documents (title, body) VALUES (?, ?);")
+	stmt, err := db.Prepare("INSERT INTO documents (title, body) VALUES (?, ?);")
 
 	if err != nil {
 		msg := xerrors.Errorf("failed to Prepare: %w", err)
@@ -109,13 +109,21 @@ func (w *WiserStoreImpl) FinDatabase() error {
 
 // GetDocumentID get document id
 func (w *WiserStoreImpl) GetDocumentID(title string) (int, error) {
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return 0, msg
+	}
+
 	query := "SELECT id FROM documents WHERE title = ?;"
-	rows, err := w.DB.Query(query, title)
+	rows, err := db.Query(query, title)
 	if err != nil {
 		msg := xerrors.Errorf("failed to Query: %w", err)
 		log.Println(msg)
 		return 0, msg
 	}
+	defer rows.Close()
 
 	if !rows.Next() {
 		return 0, DocumentNotFound
@@ -133,14 +141,22 @@ func (w *WiserStoreImpl) GetDocumentID(title string) (int, error) {
 
 // GetDocumentTitle get document id
 func (w *WiserStoreImpl) GetDocumentTitle(documentID int) (string, error) {
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return "", msg
+	}
+
 	query := "SELECT title FROM documents WHERE id = ?;"
 
-	rows, err := w.DB.Query(query, documentID)
+	rows, err := db.Query(query, documentID)
 	if err != nil {
 		msg := xerrors.Errorf("failed to Query: %w", err)
 		log.Println(msg)
 		return "", msg
 	}
+	defer rows.Close()
 
 	if !rows.Next() {
 		return "", DocumentNotFound
@@ -158,15 +174,21 @@ func (w *WiserStoreImpl) GetDocumentTitle(documentID int) (string, error) {
 
 // AddDocument if document does not exist then insert else update
 func (w *WiserStoreImpl) AddDocument(title string, body string) error {
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return msg
+	}
+
 	insertQuery := "INSERT INTO documents (title, body) VALUES (?, ?);"
 	updateQuery := "UPDATE documents set body = ? WHERE id = ?;"
 
 	id, err := w.GetDocumentID(title)
 	if err != nil {
-
 		if err.Error() == DocumentNotFound.Error() || id == 0 {
 			// TODO: survey about error caused by w.DB.Query(insertQuery, title, body)
-			stmt, err := w.DB.Prepare(insertQuery)
+			stmt, err := db.Prepare(insertQuery)
 			if err != nil {
 				msg := xerrors.Errorf("failed to Prepare: %w", err)
 				log.Println(msg)
@@ -178,6 +200,7 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 				log.Println(msg)
 				return msg
 			}
+			defer stmt.Close()
 			return nil
 		}
 		msg := xerrors.Errorf("failed to GetDocumentID: %w", err)
@@ -185,13 +208,19 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 		return msg
 	}
 
-	_, err = w.DB.Query(updateQuery, body, id)
+	stmt, err := db.Prepare(updateQuery)
 	if err != nil {
-		msg := xerrors.Errorf("failed to Query: %w", err)
+		msg := xerrors.Errorf("failed to Prepare: %w", err)
 		log.Println(msg)
 		return msg
 	}
-
+	_, err = stmt.Exec(body, id)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Exec update: %w", err)
+		log.Println(msg)
+		return msg
+	}
+	defer stmt.Close()
 	return nil
 }
 
@@ -241,6 +270,6 @@ func (w *WiserStoreImpl) RollBack() {
 
 // GetDB get *sql.DB for testing...
 // TODO: Make it a better implementation
-func (w *WiserStoreImpl) GetDB() *sql.DB {
-	return w.DB
+func (w *WiserStoreImpl) GetDBPath() string {
+	return w.DBPath
 }

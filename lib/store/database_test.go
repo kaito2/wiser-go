@@ -1,13 +1,17 @@
 package store
 
 import (
+	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitDatabase(t *testing.T) {
-	testDBFilePath := "./test.db"
+	testDBFilePath := "./TestInitDatabase.db"
+	defer os.Remove(testDBFilePath)
+
 	ws, err := NewWiserStore(testDBFilePath)
 	assert.Nil(t, err)
 	err = ws.InitDatabase()
@@ -15,7 +19,9 @@ func TestInitDatabase(t *testing.T) {
 }
 
 func TestGetDocumentID(t *testing.T) {
-	testDBFilePath := "./test.db"
+	testDBFilePath := "./TestGetDocumentID.db"
+	defer os.Remove(testDBFilePath)
+
 	ws, err := NewWiserStore(testDBFilePath)
 	assert.Nil(t, err)
 	err = ws.InitDatabase()
@@ -28,7 +34,9 @@ func TestGetDocumentID(t *testing.T) {
 }
 
 func TestGetDocumentTitle(t *testing.T) {
-	testDBFilePath := "./test.db"
+	testDBFilePath := "./TestGetDocumentTitle.db"
+	defer os.Remove(testDBFilePath)
+
 	ws, err := NewWiserStore(testDBFilePath)
 	assert.Nil(t, err)
 	err = ws.InitDatabase()
@@ -41,7 +49,9 @@ func TestGetDocumentTitle(t *testing.T) {
 }
 
 func TestAddDocument(t *testing.T) {
-	testDBFilePath := "./test.db"
+	testDBFilePath := "./TestAddDocument.db"
+	defer os.Remove(testDBFilePath)
+
 	ws, err := NewWiserStore(testDBFilePath)
 	assert.Nil(t, err)
 	err = ws.InitDatabase()
@@ -49,11 +59,15 @@ func TestAddDocument(t *testing.T) {
 
 	testTitle := "test_title"
 	testBody1 := "test_body1"
-	// testBody2 := "test_body2"
+	testBody2 := "test_body2"
+
+	// insert test
 	err = ws.AddDocument(testTitle, testBody1)
 	assert.Nil(t, err)
 
-	db := ws.GetDB()
+	// assertion
+	db, err := sql.Open("sqlite3", ws.GetDBPath())
+	assert.Nil(t, err)
 	query := "SELECT body FROM documents WHERE title = ?;"
 	rows, err := db.Query(query, testTitle)
 	assert.Nil(t, err)
@@ -62,5 +76,25 @@ func TestAddDocument(t *testing.T) {
 	var gotBody string
 	err = rows.Scan(&gotBody)
 	assert.Nil(t, err)
+	assert.Equal(t, testBody1, gotBody)
 	t.Log(gotBody)
+	err = rows.Close()
+	assert.Nil(t, err)
+
+	// update test
+	err = ws.AddDocument(testTitle, testBody2)
+	assert.Nil(t, err)
+
+	// assertion
+	rows, err = db.Query(query, testTitle)
+	defer rows.Close()
+	assert.Nil(t, err)
+	hasNext = rows.Next()
+	assert.True(t, hasNext)
+	var gotBody2 string
+	err = rows.Scan(&gotBody2)
+	assert.Nil(t, err)
+	t.Log(gotBody2)
+	// assert.Equal(t, testBody2, gotBody2)
+
 }
