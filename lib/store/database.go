@@ -180,6 +180,7 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 		log.Println(msg)
 		return msg
 	}
+	defer db.Close()
 
 	insertQuery := "INSERT INTO documents (title, body) VALUES (?, ?);"
 	updateQuery := "UPDATE documents set body = ? WHERE id = ?;"
@@ -188,19 +189,13 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 	if err != nil {
 		if err.Error() == DocumentNotFound.Error() || id == 0 {
 			// TODO: survey about error caused by w.DB.Query(insertQuery, title, body)
-			stmt, err := db.Prepare(insertQuery)
-			if err != nil {
-				msg := xerrors.Errorf("failed to Prepare: %w", err)
-				log.Println(msg)
-				return msg
-			}
-			_, err = stmt.Exec(title, body)
+			_, err = db.Exec(insertQuery, title, body)
 			if err != nil {
 				msg := xerrors.Errorf("failed to Exec: %w", err)
 				log.Println(msg)
 				return msg
 			}
-			defer stmt.Close()
+			
 			return nil
 		}
 		msg := xerrors.Errorf("failed to GetDocumentID: %w", err)
@@ -208,19 +203,12 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 		return msg
 	}
 
-	stmt, err := db.Prepare(updateQuery)
-	if err != nil {
-		msg := xerrors.Errorf("failed to Prepare: %w", err)
-		log.Println(msg)
-		return msg
-	}
-	_, err = stmt.Exec(body, id)
+	_, err = db.Exec(updateQuery, body, id)
 	if err != nil {
 		msg := xerrors.Errorf("failed to Exec update: %w", err)
 		log.Println(msg)
 		return msg
 	}
-	defer stmt.Close()
 	return nil
 }
 
