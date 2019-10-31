@@ -77,9 +77,9 @@ func TestAddDocument(t *testing.T) {
 	err = rows.Scan(&gotBody)
 	assert.Nil(t, err)
 	assert.Equal(t, testBody1, gotBody)
-	t.Log(gotBody)
 	err = rows.Close()
 	assert.Nil(t, err)
+	assert.Equal(t, testBody1, gotBody)
 
 	// update test
 	err = ws.AddDocument(testTitle, testBody2)
@@ -94,7 +94,6 @@ func TestAddDocument(t *testing.T) {
 	var gotBody2 string
 	err = rows.Scan(&gotBody2)
 	assert.Nil(t, err)
-	t.Log(gotBody2)
-	// assert.Equal(t, testBody2, gotBody2)
+	assert.Equal(t, testBody2, gotBody2)
 
 }
