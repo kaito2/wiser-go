@@ -97,3 +97,19 @@ func TestAddDocument(t *testing.T) {
 	assert.Equal(t, testBody2, gotBody2)
 
 }
+
+func TestGetTokenID(t *testing.T) {
+	testDBFilePath := "./TestGetTokenID.db"
+	defer os.Remove(testDBFilePath)
+
+	ws, err := NewWiserStore(testDBFilePath)
+	assert.Nil(t, err)
+	err = ws.InitDatabase()
+	assert.Nil(t, err)
+
+	testToken := "test_token"
+	gotTokenID, gotDocCount, err := ws.GetTokenID(testToken, true)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, gotTokenID)
+	assert.Equal(t, 0, gotDocCount)
+}

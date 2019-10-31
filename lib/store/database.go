@@ -212,9 +212,42 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 	return nil
 }
 
-// TODO: Named return value only here
+// GetTokenID get token id
 func (w *WiserStoreImpl) GetTokenID(token string, insert bool) (tokenID int, docCount int, err error) {
-	panic("not implemented")
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return 0, 0, msg
+	}
+	defer db.Close()
+	
+	if insert {
+		// add empty token row
+		// TODO: refact
+		insertQuery := "INSERT OR IGNORE INTO tokens (token, docs_count, postings) VALUES (?, 0, ?);"
+		db.Exec(insertQuery, token, "")
+	}
+	getTokenIDQuery := "SELECT id, docs_count FROM tokens WHERE token = ?;"
+	rows, err := db.Query(getTokenIDQuery, token)
+	if err != nil {
+		return 0, 0, xerrors.Errorf("failed to Query: %w", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return 0, 0, xerrors.Errorf("not found")
+	}
+
+	// var id int
+	// var docCount int
+	if err = rows.Scan(&tokenID, &docCount); err != nil {
+		msg := xerrors.Errorf("failed to Scan: %w", err)
+		log.Println(msg)
+		return 0, 0, msg
+	}
+
+	return
 }
 
 func (w *WiserStoreImpl) GetToken(tokenID int) (string, error) {
