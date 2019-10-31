@@ -4,17 +4,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-/*TextToPostingsList ...
- * 渡された文字列から、postings listを作成。
- * @param[in] env 環境
- * @param[in] document_id ドキュメントID。0の場合は、検索キーワードを対象とする。
- * @param[in] text 入力文字列
- * @param[in] text_len 入力文字列の文字長
- * @param[in] n 何-gramか
- * @param[in,out] postings ミニ転置インデックス。NULLを指すポインタを渡すと新規作成
- * @retval 0 成功
- * @retval -1 失敗
- */
+// TextToPostingsList ...
 func TextToPostingsList(documentID int, text string, gramLength int) (InvertIndexHash, error) {
 	//tLen := 0
 	//position := 0
