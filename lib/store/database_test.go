@@ -113,3 +113,25 @@ func TestGetTokenID(t *testing.T) {
 	assert.Equal(t, 1, gotTokenID)
 	assert.Equal(t, 0, gotDocCount)
 }
+
+func TestGetToken(t *testing.T) {
+	testDBFilePath := "./TestGetTokenID.db"
+	defer os.Remove(testDBFilePath)
+
+	ws, err := NewWiserStore(testDBFilePath)
+	assert.Nil(t, err)
+	err = ws.InitDatabase()
+	assert.Nil(t, err)
+
+	// prepare rows
+	// assuming that GetTokenID is insert row correctly
+	testToken := "test_token"
+	gotTokenID, gotDocCount, err := ws.GetTokenID(testToken, true)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, gotTokenID)
+	assert.Equal(t, 0, gotDocCount)
+
+	gotToken, err := ws.GetToken(1)
+	assert.Nil(t, err)
+	assert.Equal(t, testToken, gotToken)
+}

@@ -250,8 +250,30 @@ func (w *WiserStoreImpl) GetTokenID(token string, insert bool) (tokenID int, doc
 	return
 }
 
+// GetToken get token
 func (w *WiserStoreImpl) GetToken(tokenID int) (string, error) {
-	panic("not implemented")
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return "", msg
+	}
+	defer db.Close()
+	
+	getTokenQuery := "SELECT token FROM tokens WHERE id = ?;"
+	rows, err := db.Query(getTokenQuery, tokenID)
+	defer rows.Close()
+	if err != nil {
+		return "", xerrors.Errorf("failed to Query: %w", err)
+	}
+	if !rows.Next() {
+		return "", xerrors.Errorf("not found")
+	}
+	var token string
+	if err := rows.Scan(&token); err != nil {
+		return "", xerrors.Errorf("failed to Scan: %w", err)
+	}
+	return token, nil
 }
 
 func (w *WiserStoreImpl) GetPostings(tokenID int) (wiser.PostingsList, error) {
