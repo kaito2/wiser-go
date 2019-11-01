@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 
@@ -21,7 +22,7 @@ type WiserStore interface {
 	GetTokenID(token string, insert bool) (tokenID, docCount int, err error)
 	GetToken(tokenID int) (string, error)
 	GetPostings(tokenID int) (wiser.PostingsList, error)
-	UpdatePostings(tokenID int, docsCount int, postingsList wiser.PostingsList)
+	UpdatePostings(tokenID int, docsCount int, postingsList wiser.PostingsList) error
 	// Get setting info from DB
 	GetSetting(key string) (string, error)
 	ReplaceSettings(key, value string) error
@@ -195,7 +196,7 @@ func (w *WiserStoreImpl) AddDocument(title string, body string) error {
 				log.Println(msg)
 				return msg
 			}
-			
+
 			return nil
 		}
 		msg := xerrors.Errorf("failed to GetDocumentID: %w", err)
@@ -221,7 +222,7 @@ func (w *WiserStoreImpl) GetTokenID(token string, insert bool) (tokenID int, doc
 		return 0, 0, msg
 	}
 	defer db.Close()
-	
+
 	if insert {
 		// add empty token row
 		// TODO: refact
@@ -259,7 +260,7 @@ func (w *WiserStoreImpl) GetToken(tokenID int) (string, error) {
 		return "", msg
 	}
 	defer db.Close()
-	
+
 	getTokenQuery := "SELECT token FROM tokens WHERE id = ?;"
 	rows, err := db.Query(getTokenQuery, tokenID)
 	defer rows.Close()
@@ -276,15 +277,66 @@ func (w *WiserStoreImpl) GetToken(tokenID int) (string, error) {
 	return token, nil
 }
 
+// GetPostings get postings
 func (w *WiserStoreImpl) GetPostings(tokenID int) (wiser.PostingsList, error) {
-	panic("not implemented")
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return wiser.PostingsList{}, msg
+	}
+	defer db.Close()
+
+	getPostingsQuery := "SELECT docs_count, postings FROM tokens WHERE id = ?;"
+	rows, err := db.Query(getPostingsQuery, tokenID)
+	if err != nil {
+		return wiser.PostingsList{}, xerrors.Errorf("failed to Query: %w", err)
+	}
+	defer rows.Close()
+
+	var docsCount int
+	var postingsListByte []byte
+	if !rows.Next() {
+		return wiser.PostingsList{}, xerrors.New("not found")
+	}
+	if err := rows.Scan(&docsCount, &postingsListByte); err != nil {
+		return wiser.PostingsList{}, xerrors.Errorf("failed to Scan: %w", err)
+	}
+
+	// parse string to wiser.PostingsList{}
+	var postingsList wiser.PostingsList
+	if err := json.Unmarshal(postingsListByte, &postingsList); err != nil {
+		return wiser.PostingsList{}, xerrors.Errorf("failed to Unmarshal: %w", err)
+	}
+
+	log.Println(postingsList)
+
+	return postingsList, nil
 }
 
-func (w *WiserStoreImpl) UpdatePostings(tokenID int, docsCount int, postingsList wiser.PostingsList) {
-	panic("not implemented")
+// UpdatePostings update postings
+func (w *WiserStoreImpl) UpdatePostings(tokenID int, docsCount int, postingsList wiser.PostingsList) error {
+	db, err := sql.Open("sqlite3", w.DBPath)
+	if err != nil {
+		msg := xerrors.Errorf("failed to Open: %w", err)
+		log.Println(msg)
+		return msg
+	}
+	defer db.Close()
+
+	updatePostingsQuery := "UPDATE tokens SET docs_count = ?, postings = ? WHERE id = ?;"
+	postingsListByte, err := json.Marshal(postingsList)
+	if err != nil {
+		return xerrors.Errorf("failed to Marshal: %w", err)
+	}
+	if _, err := db.Exec(updatePostingsQuery, docsCount, postingsListByte, tokenID); err != nil {
+		return xerrors.Errorf("failed to Query: %w", err)
+	}
+
+	return nil
 }
 
-// Get setting info from DB
+// GetSetting get setting info from DB
 func (w *WiserStoreImpl) GetSetting(key string) (string, error) {
 	panic("not implemented")
 }

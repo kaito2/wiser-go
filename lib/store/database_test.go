@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	wiser "github.com/kaito2/wiser-go/lib"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -134,4 +135,35 @@ func TestGetToken(t *testing.T) {
 	gotToken, err := ws.GetToken(1)
 	assert.Nil(t, err)
 	assert.Equal(t, testToken, gotToken)
+}
+
+func TestUpdatePostings(t *testing.T) {
+	testDBFilePath := "./TestGetTokenID.db"
+	defer os.Remove(testDBFilePath)
+
+	ws, err := NewWiserStore(testDBFilePath)
+	assert.Nil(t, err)
+	err = ws.InitDatabase()
+	assert.Nil(t, err)
+
+	// prepare rows
+	// assuming that GetTokenID is insert row correctly
+	testToken := "test_token"
+	gotTokenID, gotDocCount, err := ws.GetTokenID(testToken, true)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, gotTokenID)
+	assert.Equal(t, 0, gotDocCount)
+
+	updatedPostingsList := wiser.PostingsList{
+		DocumentID:     123,
+		Positions:      []int{1, 2, 3},
+		PositionsCount: 3,
+		Next:           nil,
+	}
+	err = ws.UpdatePostings(1, 1, updatedPostingsList)
+	assert.Nil(t, err)
+
+	gotPostingsList, err := ws.GetPostings(1)
+	assert.Nil(t, err)
+	assert.Equal(t, updatedPostingsList, gotPostingsList)
 }
