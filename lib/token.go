@@ -5,7 +5,7 @@ import (
 )
 
 // TextToPostingsList ...
-func TextToPostingsList(documentID int, text string, gramLength int) (InvertIndexHash, error) {
+func TextToPostingsList(documentID int, text string, gramLength int) (InvertIndexMap, error) {
 	//tLen := 0
 	//position := 0
 
@@ -32,20 +32,18 @@ func doNgram(text string, n int) ([]string, error) {
 	return ngram, nil
 }
 
-// TokenToPostingsList hoge
-func TokenToPostingsList(documentID int, token string, position int) (InvertIndexValue, error) {
+/*
+// TokenToPostingsList convert Token to PostingsList
+func TokenToPostingsList(documentID int, token string, position int) (PostingsList, error) {
+	// get token id
 
-	return InvertIndexValue{
-		TokenID: 0,
-		PostingsList: []PostingsList{
-			{
-				DocumentID:     0,
-				Positions:      nil,
-				PositionsCount: 0,
-				Next:           &PostingsList{},
-			},
-		},
-		DocCount:       0,
-		PositionsCount: 0,
+	// 
+	
+	return PostingsList{
+		DocumentID:     documentID,
+		Positions:      ,
+		PositionsCount: 1,
+		Next:           &PostingsList{},
 	}, nil
 }
+*/

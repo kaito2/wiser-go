@@ -158,7 +158,7 @@ func TestUpdatePostings(t *testing.T) {
 		DocumentID:     123,
 		Positions:      []int{1, 2, 3},
 		PositionsCount: 3,
-		Next:           nil,
+		// Next:           nil,
 	}
 	err = ws.UpdatePostings(1, 1, updatedPostingsList)
 	assert.Nil(t, err)
